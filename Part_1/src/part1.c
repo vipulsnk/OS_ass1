@@ -7,82 +7,29 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h> 
-
-
-// void match_pattern(char *argv[],char *arr) 
-// { 
-//     int fd,r,j=0; 
-//     char temp,line[1000]; 
-//     if((fd=open(cpath,O_RDONLY)) != -1) 
-//     { 
-//         while((r=read(fd,&temp,sizeof(char)))!= 0) 
-//         { 
-//             if(temp!='\n') 
-//             { 
-//                 line[j]=temp; 
-//                 j++; 
-//             } 
-//             else 
-//             { 
-//                 line[j]='\0';
-//                 if(strstr(line,query)!=NULL) 
-//                     printf("%s:%s\n",cpath,line); 
-//                 j=0; 
-//             } 
-//         }
-//     }
-//     return;
-// }
-
-
-
+// this function searches for the given query in file denoted by cpath
 void qsearch(char * cpath, char * query){
-    // FILE *fptr;
-    // char * line = NULL;
-    // size_t len = 0;
-    // ssize_t read;
-    // // int fd;
-    // // char temp, line[10000];
-    // // if((fd=open(cpath, O_RDONLY)))
-    // if ((fptr = fopen(cpath, "r")) == NULL){
-    //     printf("Error! opening file");
-    //     // Program exits if file pointer returns NULL.
-    //     exit(1);         
-    // }else{
-    //     while ((read = getline(&line, &len, fptr)) != -1) {
-    //         // printf("Retrieved line of length %zu:\n", read);
-    //         if(strstr(line, query) != NULL) {
-    //             printf("%s:%s", cpath, line);
-    //         }
-    //     }
-    // if (line)
-    //     free(line);
-    // fclose(fptr);
-    // }
-
-    int fd,r,j=0; 
-    char temp,line[1000]; 
-    if((fd=open(cpath,O_RDONLY)) != -1) 
-    { 
-        while((r=read(fd,&temp,sizeof(char)))!= 0) 
-        { 
-            if(temp!='\n') 
-            { 
-                line[j]=temp; 
-                j++; 
+    int fd, ind=0; 
+    char ch,line[100000]; 
+    if((fd=open(cpath,O_RDONLY)) != -1) { 
+        while((read(fd,&ch,sizeof(char)))!= 0) { 
+            if(ch!='\n') { 
+                line[ind]=ch; 
+                ind++; 
             } 
-            else 
-            { 
-                line[j]='\0';
-                if(strstr(line,query)!=NULL) 
+            else { 
+                line[ind]='\0';
+                if(strstr(line,query)!=NULL){
                     printf("%s:%s\n",cpath,line); 
-                j=0; 
+                } 
+                ind=0; 
             } 
         }
     }
     return;
 }
 
+// this function recursively searches for files and directories and calls qsearch if a file is found otherwise itself to look in the directory found
 void search(char * path, char * query){
     DIR * dirp = opendir(path);
     char name[]="Postgraduate";
@@ -90,7 +37,6 @@ void search(char * path, char * query){
     struct stat path_stat;
     stat(path, &path_stat);
     if(S_ISREG(path_stat.st_mode)){
-        // printf("its a regular file\n");
         qsearch(path, query);
         return;
     }
@@ -103,7 +49,6 @@ void search(char * path, char * query){
             if(!strcmp(dp->d_name, ".") || !strcmp(dp->d_name, "..")){
                 continue;
             }
-            // struct stat path_stat;
             strcpy(cpath, path);
             strcat(cpath, "/");
             strcat(cpath, dp->d_name);
