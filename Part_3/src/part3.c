@@ -21,18 +21,13 @@ int compute(char* path, char * root){
         exit(1);
     }
     if(S_ISREG(path_stat.st_mode)){
-        // printf("its a regular file\n");
-        // qsearch(path, query);
-        // printf("reg file\n");
         return path_stat.st_size;
-        // return 1;
     }
     DIR * dirp = opendir(path);
     struct dirent * dp;
     if (dirp == NULL){
         printf("some error occured\n");
     }else{
-        // int len = strlen(name);
         while ((dp = readdir(dirp)) != NULL) {
             if(!strcmp(dp->d_name, ".") || !strcmp(dp->d_name, "..")){
                 continue;
@@ -42,14 +37,9 @@ int compute(char* path, char * root){
             strcat(cpath, "/");
             strcat(cpath, dp->d_name);
             stat(cpath, &path_stat);
-            // printf("%s: ", dp->d_name);
             if(S_ISREG(path_stat.st_mode)){
-                // qsearch(cpath, query);
                 ret+=path_stat.st_size;
-                // ret+=1;
-                // printf("reg file\n");
             }else if(S_ISDIR(path_stat.st_mode)){
-                // search(cpath, query);
                 pid=fork();
                 if(pid==0){
                     close(pipefd[0]);
@@ -59,35 +49,24 @@ int compute(char* path, char * root){
                     if(!strcmp(root, path)){
                         printf("%s ", cpath);
                     }
-                    
-                    // printf("child process\n");
-                    // return ret;
-                    // printf("writing temp: %d in the pipe from cpath: %s to path: %s and exiting\n", temp, cpath, path);
                     exit(0);
                     break;
                 }else{
                     wait(NULL);
-                    // close(pipefd[1]);
                     int buf;
                     read(pipefd[0], &buf, 4);
-                    // printf("sizeof int: %lu\n", 4);
                     if(!strcmp(root, path)){
                         printf("%d\n", buf);
                     }
                     ret+=buf;
-                    // printf("read buf: %d from pipe, ret: %d\n", buf, ret);
-                    // printf("read from child pipe %c\n", buf);
-                    // printf("continue parent process\n");
                     continue;
                 }
-                // printf("directory\n");
             }else{
                 printf("something else %s\n", path);  
             }
         }
         (void)closedir(dirp);
     }
-    // printf("returning from %s, ret: %d\n", path, ret);
     return ret;
 }
 
