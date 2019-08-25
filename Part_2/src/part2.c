@@ -8,31 +8,28 @@
 #include <unistd.h>
 #include <fcntl.h> 
 int word_cnt=0;
+//part1.c code
 void qsearch(char * cpath, char * query){
-    FILE *fptr;
-    char * line = NULL;
-    size_t len = 0;
-    ssize_t read;
-    int fd=open("output.txt", O_RDWR | O_CREAT);
-    dup2(fd, 1);
-    if ((fptr = fopen(cpath, "r")) == NULL){
-        printf("Error! opening file");
-        // Program exits if file pointer returns NULL.
-        exit(1);         
-    }else{
-        while ((read = getline(&line, &len, fptr)) != -1) {
-            // printf("Retrieved line of length %zu:\n", read);
-            if(strstr(line, query) != NULL) {
-                printf("%s:%s", cpath, line);
-                word_cnt++;
-            }
+    int fd, ind=0; 
+    char ch,line[100000]; 
+    if((fd=open(cpath,O_RDONLY)) != -1) { 
+        while((read(fd,&ch,sizeof(char)))!= 0) { 
+            if(ch!='\n') { 
+                line[ind]=ch; 
+                ind++; 
+            } 
+            else { 
+                line[ind]='\0';
+                if(strstr(line,query)!=NULL){
+                    word_cnt++;     // counting the lines 
+                } 
+                ind=0; 
+            } 
         }
-        if (line)
-            free(line);
-        fclose(fptr);
     }
     return;
 }
+
 
 void search(char * path, char * query){
     DIR * dirp = opendir(path);
@@ -41,7 +38,6 @@ void search(char * path, char * query){
     struct stat path_stat;
     stat(path, &path_stat);
     if(S_ISREG(path_stat.st_mode)){
-        // printf("its a regular file\n");
         qsearch(path, query);
         return;
     }
@@ -54,7 +50,6 @@ void search(char * path, char * query){
             if(!strcmp(dp->d_name, ".") || !strcmp(dp->d_name, "..")){
                 continue;
             }
-            // struct stat path_stat;
             strcpy(cpath, path);
             strcat(cpath, "/");
             strcat(cpath, dp->d_name);
@@ -79,12 +74,17 @@ void count(char * path, char * query){
     }
     return;
 }
-
+//this function uses 2 pipes, pipe1 to extract output from grep and write it to pipe2 and given file, pipe2 to execute given cmd
 void dollar(char ** argv){
     int pipefd[2];
     pid_t pid1;
     pid_t pid2;
+    int pipefd2[2];
     if(pipe(pipefd) == -1){
+        perror("pipe");
+        exit(1);
+    }
+    if(pipe(pipefd2) == -1){
         perror("pipe");
         exit(1);
     }
@@ -102,10 +102,17 @@ void dollar(char ** argv){
     }else{
         /*parent process*/
         wait(NULL);
-        dup2(pipefd[0], 0);
+        char ch;
+        int filefd=open(argv[4], O_RDWR | O_CREAT, S_IRWXU);
+        int b=0;
         close(pipefd[1]);
-        // pid2=fork();
-        execvp(argv[5], argv+6);
+        while((b=read(pipefd[0], &ch, 1)) > 0) {    // reading char by char from pipe1
+            write(filefd, &ch, 1);  // writing to file
+            write(pipefd2[1], &ch, 1);  // writing to pipew
+        }
+        close(pipefd2[1]);
+        dup2(pipefd2[0], 0);
+        execvp(argv[5], argv+5);    // using pipe2 to execute cmd
     }
 }
 
@@ -118,15 +125,7 @@ int main(int argc, char ** argv){
     if(!strcmp("@", argv[1])){
         count(argv[3], argv[2]);
     }else if(!strcmp("$", argv[1])){
-        // char cmd[1000]="";
-        // for(int i=5; i<c; i++){
-        //     strcat(cmd, argv[i]);
-        //     strcat(cmd, " ");
-        // }
-        // printf("cmd: %s\n", cmd);
         dollar(argv);
-        // dollar(argv[2], argv[3]);
-        printf("$ option\n");
     }else{
         printf("input error\n");
         return 0;
