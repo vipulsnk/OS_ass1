@@ -20,7 +20,7 @@ int compute(char* path, char * root){
         perror("pipe");
         exit(1);
     }
-    if(S_ISREG(path_stat.st_mode)){
+    if(S_ISREG(path_stat.st_mode)){ //returning size of given file
         return path_stat.st_size;
     }
     DIR * dirp = opendir(path);
@@ -37,25 +37,25 @@ int compute(char* path, char * root){
             strcat(cpath, "/");
             strcat(cpath, dp->d_name);
             stat(cpath, &path_stat);
-            if(S_ISREG(path_stat.st_mode)){
+            if(S_ISREG(path_stat.st_mode)){ // regular file found, just add up the size
                 ret+=path_stat.st_size;
-            }else if(S_ISDIR(path_stat.st_mode)){
-                pid=fork();
-                if(pid==0){
+            }else if(S_ISDIR(path_stat.st_mode)){   // directory found
+                pid=fork();     // splitting process
+                if(pid==0){     // child process
                     close(pipefd[0]);
                     int temp=0;
-                    temp=compute(cpath, root);
-                    write(pipefd[1], &temp, 4);
-                    if(!strcmp(root, path)){
+                    temp=compute(cpath, root);  // recursively computing for founded directory
+                    write(pipefd[1], &temp, sizeof(int)); // writing to pipe, communicate to parent process
+                    if(!strcmp(root, path)){    // for printing purposes
                         printf("%s ", cpath);
                     }
-                    exit(0);
+                    exit(0);    // child should exit after computing 
                     break;
                 }else{
                     wait(NULL);
                     int buf;
-                    read(pipefd[0], &buf, 4);
-                    if(!strcmp(root, path)){
+                    read(pipefd[0], &buf, sizeof(int));   // parent reading from child's data using pipe
+                    if(!strcmp(root, path)){    // printing purposes
                         printf("%d\n", buf);
                     }
                     ret+=buf;
